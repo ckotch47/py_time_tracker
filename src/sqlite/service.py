@@ -1,9 +1,12 @@
 import calendar
 import datetime
+import glob
+import json
 import sqlite3
 import os
 import sys
 import time
+from os.path import dirname, join, basename, isfile
 from pathlib import Path
 from typing import Any
 
@@ -64,12 +67,26 @@ class SQLite:
                             primary key autoincrement, \
                     time integer, \
                     name text, \
-                    data_at integer \
+                    data_at integer, \
+                    link text\
                 );'
-        self.execute(sql)
+        sql_settings = 'create table settings \
+                        ( \
+                            id integer \
+                                constraint settings_pk \
+                                    primary key autoincrement, \
+                            token text, \
+                            jwt text, \
+                            token_type text, \
+                            org_id text \
+                        );'
 
-    def save(self, time: str, name: str, date_at: int) -> dict:
-        sql = f"insert into data values (NULL, '{time}', '{name}', '{date_at}')"
+        self.execute(sql)
+        self.execute(sql_settings)
+        self.set_settings('', '')
+
+    def save(self, time: str, name: str, date_at: int, link: str) -> dict:
+        sql = f"insert into data values (NULL, '{time}', '{name}', '{date_at}', '{link}')"
         self.execute(sql)
         sql_get_last = f'select * from data order by id desc limit 1'
         return self.execute(sql_get_last).fetchall()[0]
@@ -91,3 +108,27 @@ class SQLite:
         else:
             sql = 'select * from data order by id ASC'
         return self.execute(sql).fetchall()
+
+    def set_settings(self, token: str, jwt: str, token_type='bearer'):
+        try:
+            sql = f"insert into settings VALUES (1, '{token}', '{jwt}', '{token_type}', null)"
+            return self.execute(sql).fetchall()
+        except:
+            sql = f"delete from settings where id = 1"
+            self.execute(sql)
+            sql = f"insert into settings VALUES (1, '{token}', '{jwt}', '{token_type}', null)"
+            return self.execute(sql).fetchall()
+
+    def update_settings(self, token: str = None, jwt: str = None, token_type='bearer', org_id=None):
+        if token:
+            self.execute(f"update settings set token = '{token}' where id = 1")
+        if jwt:
+            self.execute(f"update settings set jwt = '{jwt}' where id = 1")
+        if org_id:
+            self.execute(f"update settings set org_id = '{org_id}' where id = 1")
+        self.execute(f"update settings set token_type = '{token_type}' where id = 1")
+        return self.get_settings()
+    def get_settings(self):
+        return self.execute('select * from settings where id = 1').fetchall()
+
+sqlite = SQLite()

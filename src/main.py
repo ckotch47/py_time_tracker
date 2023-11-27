@@ -1,26 +1,34 @@
+import os
 import sys
 from tkinter import *
 from tkinter import messagebox, ttk
 
 from .timer.service import Timer
+from .settings.gui import Settings
+from .yandex.login import login
+from .statistic.gui import Statistic
+from .sqlite.service import get_path
+settings_gui = Settings()
+statistics_gui = Statistic()
 
 overrideredirect = False
-root = Tk()
-timer = Timer(root)
-root.overrideredirect(overrideredirect)
-root.title("Time")
-root.geometry(f"360x64+{root.winfo_screenwidth() - 360}+0")
-root.resizable(False, False)
-root.columnconfigure(0, weight=1)
-root.rowconfigure(3, weight=2)
+w_main = Tk()
+timer = Timer(w_main)
+w_main.overrideredirect(overrideredirect)
+w_main.title("Time")
+w_main.geometry(f"360x96+{w_main.winfo_screenwidth() - 360}+0")
+w_main.resizable(False, False)
+w_main.columnconfigure(0, weight=1)
+w_main.rowconfigure(3, weight=2)
 
 
 
 def on_closing():
     if not timer.play:
-        root.destroy()
+        w_main.destroy()
     else:
         messagebox.showerror('error', 'Please stop timer')
+
 
 def get_right_click() -> str:
     if sys.platform == 'darwin':
@@ -43,6 +51,9 @@ def menu(root_frame):
     m = Menu(root_frame, tearoff=0)
     m.add_command(label="Overrideredirect",
                   command=lambda: [root_frame.overrideredirect(revert_overrideredirect())])
+    m.add_command(label='Statistics', command=lambda: [statistics_gui.init(w_main)])
+    m.add_command(label='Settings', command=lambda: [settings_gui.init(w_main)])
+
     m.add_command(label="Exit",
                   command=lambda: [on_closing()])
 
@@ -56,22 +67,25 @@ def menu(root_frame):
 
 
 def main():
-    top_frame = Frame(root)
-    bottom_frame = Frame(root)
-    history_frame = Frame(root)
+    top_frame = Frame(w_main)
+    bottom_frame = Frame(w_main)
+    history_frame = Frame(w_main)
+    bottom_link_frame = Frame(w_main)
 
     text_entry = StringVar()
+    link_entry = StringVar()
 
-    root.protocol("WM_DELETE_WINDOW", on_closing)
+    w_main.protocol("WM_DELETE_WINDOW", on_closing)
 
     time = Label(top_frame, textvariable=timer.time)
-    image_play = PhotoImage(file='assets/play.png')
-    image_stop = PhotoImage(file='assets/stop.png')
-    image_history = PhotoImage(file='assets/history.png')
+    image_play = PhotoImage(file=f'{get_path()}/assets/play.png')
+    image_stop = PhotoImage(file=f'{get_path()}/assets/stop.png')
+    image_history = PhotoImage(file=f'{get_path()}/assets/history.png')
     btn_start = Button(top_frame, image=image_play, compound=LEFT, command=lambda: timer.loop(text_entry.get()))
-    btn_stop = Button(top_frame, image=image_stop, command=lambda: [timer.stop(text_entry.get()), text_entry.set('')])
+    btn_stop = Button(top_frame, image=image_stop, command=lambda: [timer.stop(text_entry.get(), link_entry.get()), text_entry.set(''), link_entry.set('')])
     btn_show_history = Button(top_frame, image=image_history, command=timer.history.click)
-    entry_comment = Entry(bottom_frame, textvariable=text_entry, width=100)
+    entry_comment = Entry(bottom_frame, textvariable=text_entry, width=25)
+    entry_link = Entry(bottom_link_frame, textvariable=link_entry, width=25)
 
     time.pack(side=LEFT, fill='x')
 
@@ -79,15 +93,20 @@ def main():
     btn_stop.pack(side=RIGHT, padx=(0, 10))
     btn_start.pack(side=RIGHT, padx=10)
 
-    entry_comment.pack(side=LEFT, fill='x')
+    Label(bottom_frame, text='Local comment').pack(side='left')
+    entry_comment.pack(fill='x', side='right')
+    Label(bottom_link_frame, text='Id or link').pack(side='left')
+    entry_link.pack(fill='x', side='right')
 
     top_frame.pack(fill='x', pady=(0, 10))
     bottom_frame.pack(fill='x')
+    bottom_link_frame.pack(fill='x')
     history_frame.pack(pady=(0, 10))
-    menu(root)
-    root.focus_force()
+    menu(w_main)
+    w_main.focus_force()
 
     if sys.platform == 'win32':
         ttk.Style().theme_use("clam")
 
-    root.mainloop()
+    login.isLogin()
+    w_main.mainloop()

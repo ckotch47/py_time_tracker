@@ -1,10 +1,11 @@
 import datetime
 import threading
 from time import sleep
-from tkinter import StringVar
-from ..history.service import History
+from tkinter import StringVar, messagebox
+from ..history.service import History, sqlite
+from ..yandex.login import login
 import calendar
-
+import re
 
 class Timer:
     thread = None
@@ -26,12 +27,25 @@ class Timer:
             self.time.set(str(datetime.timedelta(seconds=self.timer_s)))
             sleep(1)
 
-    def stop(self, name=None):
+    def stop(self, name=None, link=None):
         if name:
             self.name = name
         self.play = False
         if self.timer_s != 0:
-            self.history.save(str(self.timer_s), self.name, calendar.timegm(datetime.datetime.now().utctimetuple()))
+            self.history.save(str(self.timer_s), self.name, calendar.timegm(datetime.datetime.now().utctimetuple()), link)
+        ext_link = re.findall(r'[A-Z]*-[0-9]*', link)
+        if len(ext_link) == 0:
+            self.timer_s = 0
+            self._start_time = 0
+            return
+        ext_link = ext_link[0]
+        try:
+            res = login.write_worklog(ext_link, datetime.datetime.now().isoformat(), str(self.timer_s), self.name)
+            if res.status_code != 201:
+                messagebox.showerror('Not sent into tracker', res.json())
+        except Exception as e:
+            messagebox.showerror('Not sent into tracker', e)
+
         self.timer_s = 0
         self._start_time = 0
 

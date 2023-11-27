@@ -1,20 +1,15 @@
 import calendar
 import datetime
 import time
-from tkinter import ttk, BROWSE
-from ..sqlite.service import SQLite
-
-
-sqlite = SQLite()
-
-
+from tkinter import ttk, BROWSE, Label
+from ..sqlite.service import sqlite
 
 
 def timestmap_to_date(date) -> str:
     return datetime.datetime.utcfromtimestamp(date).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def second_to_human_view(sec) -> datetime.timedelta | str:
+def second_to_human_view(sec):
     try:
         return datetime.timedelta(seconds=int(sec))
     except TypeError:
@@ -41,7 +36,8 @@ class HistoryRange:
         self.table.heading("month", text="Month", anchor='center')
 
     def pack(self):
-        self.table.pack()#grid(row=2, column=0, sticky="ew")
+        Label(text='Local').pack()
+        self.table.pack()  # grid(row=2, column=0, sticky="ew")
 
     def show(self):
         self.init()
@@ -96,18 +92,20 @@ class History:
     def init(self):
         self.history = ttk.Treeview(self.root)
 
-        self.history['columns'] = ('id', 'time', 'name', 'date_at')
+        self.history['columns'] = ('id', 'time', 'name', 'link', 'date_at')
 
         self.history.column('#0', width=0, stretch=False)
         self.history.column('id', anchor='center', width=50)
         self.history.column('time', anchor='center', width=80)
         self.history.column('name', anchor='center', width=100)
+        self.history.column('link', anchor='center', width=100)
         self.history.column('date_at', anchor='center', width=130)
 
         self.history.heading("#0", text="", anchor='center')
         self.history.heading("id", text="Id", anchor='center')
         self.history.heading("time", text="Time", anchor='center')
         self.history.heading("name", text="Name", anchor='center')
+        self.history.heading("link", text="Link", anchor='center')
         self.history.heading("date_at", text="DateAt", anchor='center')
 
     def click(self):
@@ -126,16 +124,16 @@ class History:
         self.history.pack()
 
     def destroy(self):
-        self.root.geometry("360x64")
+        self.root.geometry("360x96")
         self.history.destroy()
 
-    def save(self, time_s: str, name: str, date_at: int):
-        i = sqlite.save(time_s, name, date_at)
+    def save(self, time_s: str, name: str, date_at: int, link: str = None):
+        i = sqlite.save(time_s, name, date_at, link)
         if self.history:
             try:
                 self.history.insert(parent='', index=0, iid=f'{i[0]}', text=f'{i[1]}',
                                     values=(i[0], f'{datetime.timedelta(seconds=int(i[1]))}', f'{i[2]}',
-                                            f'{timestmap_to_date(i[3])}'))
+                                            i[4], f'{timestmap_to_date(i[3])}'))
                 self.range.get()
             except:
                 pass
@@ -146,4 +144,4 @@ class History:
             for i in temp:
                 self.history.insert(parent='', index='end', iid=f'{i[0]}', text=f'{i[1]}',
                                     values=(i[0], f'{(datetime.timedelta(seconds=int(i[1])))}', f'{i[2]}',
-                                            f'{timestmap_to_date(i[3])}'))
+                                            i[4], f'{timestmap_to_date(i[3])}'))
