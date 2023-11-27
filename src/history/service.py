@@ -1,18 +1,20 @@
 import calendar
 import datetime
 import time
-from datetime import timedelta
-from tkinter import ttk
+from tkinter import ttk, BROWSE
 from ..sqlite.service import SQLite
 
+
 sqlite = SQLite()
+
+
 
 
 def timestmap_to_date(date) -> str:
     return datetime.datetime.utcfromtimestamp(date).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def second_to_human_view(sec) -> timedelta | str:
+def second_to_human_view(sec) -> datetime.timedelta | str:
     try:
         return datetime.timedelta(seconds=int(sec))
     except TypeError:
@@ -25,7 +27,7 @@ class HistoryRange:
         self.root = root_frame
 
     def init(self):
-        self.table = ttk.Treeview(self.root, height=1)
+        self.table = ttk.Treeview(self.root, height=1, selectmode=BROWSE)
         self.table['columns'] = ('day', 'weak', 'month')
 
         self.table.column('#0', width=0, stretch=False)
@@ -39,7 +41,7 @@ class HistoryRange:
         self.table.heading("month", text="Month", anchor='center')
 
     def pack(self):
-        self.table.grid(row=2, column=0, sticky="ew")
+        self.table.pack()#grid(row=2, column=0, sticky="ew")
 
     def show(self):
         self.init()
@@ -121,7 +123,7 @@ class History:
     def pack(self):
         self.root.geometry("360x315")
         self.init()
-        self.history.grid(row=3, column=0, sticky="ew")
+        self.history.pack()
 
     def destroy(self):
         self.root.geometry("360x64")
@@ -139,7 +141,7 @@ class History:
                 pass
 
     def show(self):
-        temp = sqlite.get()
+        temp = sqlite.get(all=False)
         if temp:
             for i in temp:
                 self.history.insert(parent='', index='end', iid=f'{i[0]}', text=f'{i[1]}',

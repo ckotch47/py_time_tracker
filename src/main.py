@@ -1,11 +1,26 @@
 import sys
 from tkinter import *
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from .timer.service import Timer
 
-overrideredirect = True
+overrideredirect = False
+root = Tk()
+timer = Timer(root)
+root.overrideredirect(overrideredirect)
+root.title("Time")
+root.geometry(f"360x64+{root.winfo_screenwidth() - 360}+0")
+root.resizable(False, False)
+root.columnconfigure(0, weight=1)
+root.rowconfigure(3, weight=2)
 
+
+
+def on_closing():
+    if not timer.play:
+        root.destroy()
+    else:
+        messagebox.showerror('error', 'Please stop timer')
 
 def get_right_click() -> str:
     if sys.platform == 'darwin':
@@ -27,10 +42,9 @@ def menu(root_frame):
     global overrideredirect
     m = Menu(root_frame, tearoff=0)
     m.add_command(label="Overrideredirect",
-                  command=lambda: [
-    print(root_frame.geometry()), root_frame.overrideredirect(revert_overrideredirect())])
-    m.add_command(label="Stick up",
-                  command=lambda: root_frame.winfo_geometry())
+                  command=lambda: [root_frame.overrideredirect(revert_overrideredirect())])
+    m.add_command(label="Exit",
+                  command=lambda: [on_closing()])
 
     def do_popup(event):
         try:
@@ -42,38 +56,38 @@ def menu(root_frame):
 
 
 def main():
-    global overrideredirect
-    root = Tk()
-    root.overrideredirect(overrideredirect)
-    root.title("Time")
-    root.geometry(f"360x64+{root.winfo_screenwidth() - 360}+0")
-    root.resizable(False, False)
-    root.columnconfigure(0, weight=1)
+    top_frame = Frame(root)
+    bottom_frame = Frame(root)
+    history_frame = Frame(root)
 
-    timer = Timer(root)
     text_entry = StringVar()
-
-    def on_closing():
-        if timer.timer_s == 0 and messagebox.askokcancel("Quit", "Do you want to quit? "):
-            root.destroy()
-        else:
-            messagebox.showerror('error', 'Please stop timer')
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
-    time = Label(textvariable=timer.time)
-    btn_start = Button(text="Start", command=lambda: timer.loop(text_entry.get()))
-    btn_stop = Button(text="Stop", command=lambda: [timer.stop(text_entry.get()), text_entry.set('')])
-    btn_show_history = Button(text="History", command=timer.history.click)
-    entry_comment = Entry(textvariable=text_entry, width=30)
+    time = Label(top_frame, textvariable=timer.time)
+    image_play = PhotoImage(file='assets/play.png')
+    image_stop = PhotoImage(file='assets/stop.png')
+    image_history = PhotoImage(file='assets/history.png')
+    btn_start = Button(top_frame, image=image_play, compound=LEFT, command=lambda: timer.loop(text_entry.get()))
+    btn_stop = Button(top_frame, image=image_stop, command=lambda: [timer.stop(text_entry.get()), text_entry.set('')])
+    btn_show_history = Button(top_frame, image=image_history, command=timer.history.click)
+    entry_comment = Entry(bottom_frame, textvariable=text_entry, width=100)
 
-    time.grid(row=0, column=0, sticky=W)
-    btn_start.grid(row=0, column=0, sticky=N)
-    btn_stop.grid(row=0, column=0, sticky=E)
+    time.pack(side=LEFT, fill='x')
 
-    entry_comment.grid(row=1, column=0, sticky=W)
-    btn_show_history.grid(row=1, column=0, sticky=E)
+    btn_show_history.pack(side=RIGHT, padx=(0, 0))
+    btn_stop.pack(side=RIGHT, padx=(0, 10))
+    btn_start.pack(side=RIGHT, padx=10)
 
+    entry_comment.pack(side=LEFT, fill='x')
+
+    top_frame.pack(fill='x', pady=(0, 10))
+    bottom_frame.pack(fill='x')
+    history_frame.pack(pady=(0, 10))
     menu(root)
     root.focus_force()
+
+    if sys.platform == 'win32':
+        ttk.Style().theme_use("clam")
+
     root.mainloop()

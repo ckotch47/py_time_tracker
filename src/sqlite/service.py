@@ -1,6 +1,9 @@
+import calendar
+import datetime
 import sqlite3
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +74,20 @@ class SQLite:
         sql_get_last = f'select * from data order by id desc limit 1'
         return self.execute(sql_get_last).fetchall()[0]
 
-    def get(self) -> list:
-        sql = 'select * from data order by id desc'
+    def get(self, take: int = -1, offset: int = -1, all: bool = True) -> list:
+        if not all:
+            temp = datetime.datetime.now()
+            mouth = {
+                'start': time.mktime(datetime.datetime.fromisoformat(
+                    f"{temp.date() - datetime.timedelta(days=temp.day - 1)}T00:00:00+00:00").timetuple()) + 10787,
+                'end': time.mktime(datetime.datetime.fromisoformat(
+                    f"{temp.date() + datetime.timedelta(days=calendar.monthrange(temp.date().year, temp.date().month)[1] - temp.day)}T23:59:59+00:00").timetuple()) + 10787
+            }
+            sql = f"select * from data where data_at > {mouth.get('start')} AND data_at < {mouth.get('end')} order by id desc"
+            return self.execute(sql).fetchall()
+
+        if take > -1 and offset > -1:
+            sql = f"select * from data order by id desc limit {take} offset {offset}"
+        else:
+            sql = 'select * from data order by id ASC'
         return self.execute(sql).fetchall()
