@@ -19,6 +19,7 @@ def second_to_human_view(sec):
 class HistoryRange:
     def __init__(self, root_frame):
         self.table = None
+        self.label = None
         self.root = root_frame
 
     def init(self):
@@ -36,7 +37,8 @@ class HistoryRange:
         self.table.heading("month", text="Month", anchor='center')
 
     def pack(self):
-        Label(text='Local').pack()
+        self.label = Label(text='Local')
+        self.label.pack()
         self.table.pack()  # grid(row=2, column=0, sticky="ew")
 
     def show(self):
@@ -45,6 +47,7 @@ class HistoryRange:
         self.pack()
 
     def close(self):
+        self.label.destroy()
         self.table.destroy()
 
     def get(self):
