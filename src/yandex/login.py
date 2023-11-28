@@ -7,7 +7,7 @@ import requests
 from PIL import Image, ImageTk
 import qrcode
 from src.yandex.yandex import yandex
-from src.sqlite.service import sqlite
+from src.sqlite.service import sqlite, get_path
 
 BASE_URL = 'https://api.tracker.yandex.net/v2'
 
@@ -61,16 +61,16 @@ class Login:
     @staticmethod
     def generateQR():
         data = yandex.url
-        filename = 'qr_code.png'
+        filename = f'{get_path()}/qr_code.png'
         img = qrcode.make(data)
         img.save(filename)
 
     def GUI(self):
         if self.checkCode():
-            image = Image.open("qr_code.png")
+            image = Image.open(f'{get_path()}/qr_code.png')
         else:
             self.generateQR()
-            image = Image.open("qr_code.png")
+            image = Image.open(f'{get_path()}/qr_code.png')
 
         self.__mainWindow = tkinter.Toplevel()
         self.__mainWindow.wm_title('Yandex auth')
@@ -148,7 +148,7 @@ class Login:
 
     @staticmethod
     def checkCode():
-        if os.path.isfile('qr_code.png'):
+        if os.path.isfile(f'{get_path()}/qr_code.png'):
             return True
         else:
             return False

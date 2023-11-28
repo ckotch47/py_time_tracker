@@ -18,6 +18,6 @@ if not os.path.isfile(f'{get_path()}/assets/play.png') or \
     open(f'{get_path()}/assets/stop.png', 'wb').write(r.content)
     r = requests.get('https://raw.githubusercontent.com/ckotch47/py_time_tracker/origin/assets/history.png', allow_redirects=True)
     open(f'{get_path()}/assets/history.png', 'wb').write(r.content)
-#  pyinstaller --onefile --noconsole --noconfirm -n pytimetracker main.py
+#  pyinstaller --onefile --noconsole --noconfirm -n pytimetracker -w main.py
 # add tag
 main()
