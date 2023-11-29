@@ -3,9 +3,10 @@ import threading
 from time import sleep
 from tkinter import StringVar, messagebox
 from ..history.service import History, sqlite
-from ..yandex.login import login
+from ..yandex.service import login
 import calendar
 import re
+
 
 class Timer:
     thread = None
@@ -31,8 +32,10 @@ class Timer:
         if name:
             self.name = name
         self.play = False
-        if self.timer_s != 0:
-            self.history.save(str(self.timer_s), self.name, calendar.timegm(datetime.datetime.now().utctimetuple()), link)
+        if self.timer_s == 0:
+            return
+        self.history.save(str(self.timer_s), self.name, datetime.datetime.now().isoformat(),
+                              link)
         ext_link = re.findall(r'[A-Z]*-[0-9]*', link)
         if len(ext_link) == 0:
             self.timer_s = 0
@@ -44,6 +47,7 @@ class Timer:
             if res.status_code != 201:
                 messagebox.showerror('Not sent into tracker', res.json())
         except Exception as e:
+            print(e)
             messagebox.showerror('Not sent into tracker', e)
 
         self.timer_s = 0

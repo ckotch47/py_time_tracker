@@ -2,24 +2,52 @@ import calendar
 import datetime
 import time
 from tkinter import ttk, BROWSE, Label
+
+import isodate
+
 from ..sqlite.service import sqlite
+from ..statistic.service import second_to_human_view
+from ..yandex.service import login
 
 
 def timestmap_to_date(date) -> str:
     return datetime.datetime.utcfromtimestamp(date).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def second_to_human_view(sec):
-    try:
-        return datetime.timedelta(seconds=int(sec))
-    except TypeError:
-        return '0:00:00'
+def get_date():
+    temp = datetime.datetime.now()
+    today = datetime.datetime.fromisoformat(f"{temp.date()}T00:00:00+00:00").date()
+
+    w_start = datetime.datetime.fromisoformat(
+        f"{temp.date() - datetime.timedelta(days=temp.weekday())}T00:00:00+00:00").date()
+    w_end = datetime.datetime.fromisoformat(
+        f"{temp.date() + datetime.timedelta(days=6 - temp.weekday())}T23:59:59+00:00").date()
+    m_start = datetime.datetime.fromisoformat(
+        f"{temp.date() - datetime.timedelta(days=temp.day - 1)}T00:00:00+00:00").date()
+    m_end = datetime.datetime.fromisoformat(
+        f"{temp.date() + datetime.timedelta(days=calendar.monthrange(temp.date().year, temp.date().month)[1] - temp.day)}T23:59:59+00:00").date()
+
+    return {
+        "today": today,
+        "week": {
+            "start": w_start,
+            "end": w_end
+        },
+        "month": {
+            "start": m_start,
+            "end": m_end
+        }
+    }
 
 
 class HistoryRange:
+
+
     def __init__(self, root_frame):
+        self.month = None
+        self.week = None
+        self.day = None
         self.table = None
-        self.label = None
         self.root = root_frame
 
     def init(self):
@@ -37,18 +65,22 @@ class HistoryRange:
         self.table.heading("month", text="Month", anchor='center')
 
     def pack(self):
-        self.label = Label(text='Local')
-        self.label.pack()
-        self.table.pack()  # grid(row=2, column=0, sticky="ew")
-
-    def show(self):
         self.init()
-        self.get()
+        self.table.pack(fill='x')  # grid(row=2, column=0, sticky="ew")
+
+    def packs(self):
         self.pack()
 
+    def show(self):
+        self.get()
+
     def close(self):
-        self.label.destroy()
         self.table.destroy()
+
+    def set(self, day, week, month):
+        self.day = day
+        self.week = week
+        self.month = month
 
     def get(self):
         try:
@@ -56,33 +88,9 @@ class HistoryRange:
         except:
             pass
 
-        temp = datetime.datetime.now()
-        today = {
-            'start': time.mktime(datetime.datetime.fromisoformat(f"{temp.date()}T00:00:00+00:00").timetuple()) + 10787,
-            'end': time.mktime(datetime.datetime.fromisoformat(f"{temp.date()}T23:59:59+00:00").timetuple()) + 10787
-        }
-        weak = {
-            'start': time.mktime(datetime.datetime.fromisoformat(
-                f"{temp.date() - datetime.timedelta(days=temp.weekday())}T00:00:00+00:00").timetuple()) + 10787,
-            'end': time.mktime(datetime.datetime.fromisoformat(
-                f"{temp.date() + datetime.timedelta(days=6 - temp.weekday())}T23:59:59+00:00").timetuple()) + 10787,
-        }
-        mouth = {
-            'start': time.mktime(datetime.datetime.fromisoformat(
-                f"{temp.date() - datetime.timedelta(days=temp.day - 1)}T00:00:00+00:00").timetuple()) + 10787,
-            'end': time.mktime(datetime.datetime.fromisoformat(
-                f"{temp.date() + datetime.timedelta(days=calendar.monthrange(temp.date().year, temp.date().month)[1] - temp.day)}T23:59:59+00:00").timetuple()) + 10787
-        }
-        sql_today = f"select sum(time) from data where data_at > {today.get('start')} AND data_at < {today.get('end')}"
-        sql_weak = f"select sum(time) from data where data_at > {weak.get('start')} AND data_at < {weak.get('end')}"
-        sql_mouth = f"select sum(time) from data where data_at > {mouth.get('start')} AND data_at < {mouth.get('end')}"
-        day = sqlite.execute(sql_today).fetchall()[0][0]
-        week = sqlite.execute(sql_weak).fetchall()[0][0]
-        mouth = sqlite.execute(sql_mouth).fetchall()[0][0]
-
         self.table.insert(parent='', index=0, iid=f'0', text=f'',
-                          values=(f'{second_to_human_view(day)}', f'{second_to_human_view(week)}',
-                                  f'{second_to_human_view(mouth)}'))
+                          values=(f'{second_to_human_view(self.day)}', f'{second_to_human_view(self.week)}',
+                                  f'{second_to_human_view(self.month)}'))
 
 
 class History:
@@ -95,56 +103,120 @@ class History:
     def init(self):
         self.history = ttk.Treeview(self.root)
 
-        self.history['columns'] = ('id', 'time', 'name', 'link', 'date_at')
+        self.history['columns'] = ('date', 'link', 'time', 'comment')
 
         self.history.column('#0', width=0, stretch=False)
-        self.history.column('id', anchor='center', width=50)
-        self.history.column('time', anchor='center', width=80)
-        self.history.column('name', anchor='center', width=100)
+        self.history.column('date', anchor='center', width=80)
         self.history.column('link', anchor='center', width=100)
-        self.history.column('date_at', anchor='center', width=130)
+        self.history.column('time', anchor='center', width=100)
+        self.history.column('comment', anchor='center', width=130)
 
         self.history.heading("#0", text="", anchor='center')
-        self.history.heading("id", text="Id", anchor='center')
-        self.history.heading("time", text="Time", anchor='center')
-        self.history.heading("name", text="Name", anchor='center')
+        self.history.heading("date", text="Date", anchor='center')
         self.history.heading("link", text="Link", anchor='center')
-        self.history.heading("date_at", text="DateAt", anchor='center')
+        self.history.heading("time", text="Time", anchor='center')
+        self.history.heading("comment", text="Comment", anchor='center')
 
     def click(self):
         if self.state:
             self.destroy()
             self.range.close()
         else:
-            self.range.show()
+            self.range.pack()
             self.pack()
             self.show()
+            self.range.show()
         self.state = not self.state
 
     def pack(self):
         self.root.geometry("360x315")
         self.init()
-        self.history.pack()
+        # self.history.range.pack()
+        self.history.pack(fill='x', expand=1)
 
     def destroy(self):
         self.root.geometry("360x96")
         self.history.destroy()
 
-    def save(self, time_s: str, name: str, date_at: int, link: str = None):
-        i = sqlite.save(time_s, name, date_at, link)
+    def save(self, time_s: str, name: str, date_at: str, link: str = None):
         if self.history:
             try:
-                self.history.insert(parent='', index=0, iid=f'{i[0]}', text=f'{i[1]}',
-                                    values=(i[0], f'{datetime.timedelta(seconds=int(i[1]))}', f'{i[2]}',
-                                            i[4], f'{timestmap_to_date(i[3])}'))
-                self.range.get()
-            except:
+                self.history.insert(parent='', index='0', iid=f'{int(time_s)}_{date_at}', text=f'',
+                                    values=(
+                                        f"{date_at.split('T')[0]}",
+                                        link,
+                                        second_to_human_view(time_s),
+                                        name,
+                                    ))
+                self.range.set(
+                    day=self.range.day + int(time_s),
+                    week=self.range.week + int(time_s),
+                    month=self.range.month + int(time_s)
+                )
+                self.range.show()
+            except Exception as e:
+                print(e)
                 pass
 
     def show(self):
-        temp = sqlite.get(all=False)
-        if temp:
-            for i in temp:
-                self.history.insert(parent='', index='end', iid=f'{i[0]}', text=f'{i[1]}',
-                                    values=(i[0], f'{(datetime.timedelta(seconds=int(i[1])))}', f'{i[2]}',
-                                            i[4], f'{timestmap_to_date(i[3])}'))
+        date = get_date()
+        user = login.isLogin()
+        temp = login.get_statistic_fro_month(user['login'], str(date['month']['start']),
+                                             str(date['month']['end']))  # sqlite.get(all=False)
+        if temp.status_code != 200:
+            return
+        temp = temp.json()
+
+        if len(temp) == 0:
+            return
+
+        day = 0
+        week = 0
+        month = 0
+        history_arr = []
+
+        for i in temp:
+            try:
+                comment = i['comment']
+            except:
+                comment = ''
+
+            month += int(isodate.parse_duration(i['duration']).total_seconds())
+            temp_createdAt = datetime.datetime.fromisoformat(i['createdAt'].split('T')[0]).date()
+            if date['week']['start'] <= temp_createdAt <= date['week']['end']:
+                history_arr.append(
+                    (
+                        i['issue']['key'],
+                        i['createdAt'],
+                        int(isodate.parse_duration(i['duration']).total_seconds()),
+                        comment
+                    )
+                )
+                week += int(isodate.parse_duration(i['duration']).total_seconds())
+
+            if date['today'] == temp_createdAt:
+                day += int(isodate.parse_duration(i['duration']).total_seconds())
+
+        self.range.week = week
+        self.range.set(day, week, month)
+        j = 0
+        if len(history_arr):
+            for i in reversed(history_arr):
+                self.history.insert(parent='', index='end', iid=f'{j}', text=f'',
+                                    values=(
+                                        f"{i[1].split('.')[0]}",
+                                        i[0],
+                                        second_to_human_view(i[2]),
+                                        i[3],
+                                    ))
+                j += 1
+
+        self.history.bind("<Double-1>", self.link_tree)
+
+    def link_tree(self, event):
+        input_id = self.history.selection()
+        input_item = self.history.item(input_id)['values'][1]
+        if input_item:
+            import webbrowser
+            webbrowser.open(f"https://tracker.yandex.ru/PN-2{input_item}")
+        # for opening the link in browser

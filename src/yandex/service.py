@@ -1,6 +1,7 @@
 import configparser
 import tkinter
 import os.path
+import datetime
 from tkinter import messagebox
 
 import requests
@@ -11,6 +12,22 @@ from src.sqlite.service import sqlite, get_path
 
 BASE_URL = 'https://api.tracker.yandex.net/v2'
 
+def timedelta_to_hms(duration):
+    days, seconds = duration.days, duration.seconds
+    hours = days * 24 + seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = (seconds % 60)
+    return hours, minutes, seconds
+
+def second_to_human_view(sec):
+    try:
+        t = datetime.timedelta(seconds=int(sec))
+        t = timedelta_to_hms(t)
+        return f"{t[0] if t[0] > 9 else f'0{t[0]}'}:" \
+               f"{t[1] if t[1] > 9 else f'0{t[1]}'}:" \
+               f"{t[2] if t[2] > 9 else f'0{t[2]}'}"
+    except TypeError:
+        return '0:00:00'
 
 class Login:
     def __init__(self):
@@ -133,7 +150,6 @@ class Login:
         return tmp
 
     def get_statistic_fro_month(self, user_login: str, from_data: str, to_data: str):
-
         tmp = requests.post(url=f'{BASE_URL}/worklog/_search',
                             # todo setting X-Cloud-Org-ID
                             headers={"Authorization": "OAuth " + self.access_token, "X-Cloud-Org-ID": self.org_id},

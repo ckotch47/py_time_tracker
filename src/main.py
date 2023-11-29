@@ -4,10 +4,12 @@ from tkinter import *
 from tkinter import messagebox, ttk
 
 from .timer.service import Timer
-from .settings.gui import Settings
-from .yandex.login import login
-from .statistic.gui import Statistic
+from .settings.service import Settings
+from .yandex.service import login
+from .statistic.service import Statistic
 from .sqlite.service import get_path
+
+# from .history.service import History
 settings_gui = Settings()
 statistics_gui = Statistic()
 
@@ -17,10 +19,9 @@ timer = Timer(w_main)
 w_main.overrideredirect(overrideredirect)
 w_main.title("Time")
 w_main.geometry(f"360x96+{w_main.winfo_screenwidth() - 360}+0")
-w_main.resizable(False, False)
+w_main.resizable(True, True)
 w_main.columnconfigure(0, weight=1)
 w_main.rowconfigure(3, weight=2)
-
 
 
 def on_closing():
@@ -71,7 +72,7 @@ def main():
     bottom_frame = Frame(w_main)
     history_frame = Frame(w_main)
     bottom_link_frame = Frame(w_main)
-
+    # history = History(w_main)
     text_entry = StringVar()
     link_entry = StringVar()
 
@@ -82,8 +83,10 @@ def main():
     image_stop = PhotoImage(file=f'{get_path()}/assets/stop.png')
     image_history = PhotoImage(file=f'{get_path()}/assets/history.png')
     btn_start = Button(top_frame, image=image_play, compound=LEFT, command=lambda: timer.loop(text_entry.get()))
-    btn_stop = Button(top_frame, image=image_stop, command=lambda: [timer.stop(text_entry.get(), link_entry.get()), text_entry.set(''), link_entry.set('')])
-    btn_show_history = Button(top_frame, image=image_history, command=timer.history.click)
+    btn_stop = Button(top_frame, image=image_stop,
+                      command=lambda: [timer.stop(text_entry.get(), link_entry.get()), text_entry.set(''),
+                                       link_entry.set('')])
+    btn_show_history = Button(top_frame, image=image_history, command=lambda: [statistics_gui.init(w_main)]) #command=timer.history.click)
     entry_comment = Entry(bottom_frame, textvariable=text_entry, width=25)
     entry_link = Entry(bottom_link_frame, textvariable=link_entry, width=25)
 
@@ -93,7 +96,7 @@ def main():
     btn_stop.pack(side=RIGHT, padx=(0, 10))
     btn_start.pack(side=RIGHT, padx=10)
 
-    Label(bottom_frame, text='Local comment').pack(side='left')
+    Label(bottom_frame, text='Comment').pack(side='left')
     entry_comment.pack(fill='x', side='right')
     Label(bottom_link_frame, text='Id or link').pack(side='left')
     entry_link.pack(fill='x', side='right')
@@ -108,5 +111,7 @@ def main():
     if sys.platform == 'win32':
         ttk.Style().theme_use("clam")
 
-    login.isLogin()
+    user = login.isLogin()
+    if user:
+        timer.history.click()
     w_main.mainloop()
