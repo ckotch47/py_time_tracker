@@ -108,7 +108,7 @@ def main():
     w_main.focus_force()
 
     if sys.platform == 'win32':
-        ttk.Style().theme_use("clam")
+        ttk.Style().theme_use("winnative")
 
     user = login.isLogin()
     if user:
