@@ -1,4 +1,3 @@
-import os
 import sys
 from tkinter import *
 from tkinter import messagebox, ttk
@@ -82,11 +81,11 @@ def main():
     image_play = PhotoImage(file=f'{get_path()}/assets/play.png')
     image_stop = PhotoImage(file=f'{get_path()}/assets/stop.png')
     image_history = PhotoImage(file=f'{get_path()}/assets/history.png')
-    btn_start = Button(top_frame, image=image_play, compound=LEFT, command=lambda: timer.loop(text_entry.get()))
-    btn_stop = Button(top_frame, image=image_stop,
+    btn_start = Button(top_frame, width=16, height=16, image=image_play, compound=LEFT, command=lambda: timer.loop(text_entry.get()))
+    btn_stop = Button(top_frame, width=16, height=16, image=image_stop,
                       command=lambda: [timer.stop(text_entry.get(), link_entry.get()), text_entry.set(''),
                                        link_entry.set('')])
-    btn_show_history = Button(top_frame, image=image_history, command=lambda: [statistics_gui.init(w_main)]) #command=timer.history.click)
+    btn_show_history = Button(top_frame, width=16, height=16, image=image_history, command=lambda: [statistics_gui.init(w_main)]) #command=timer.history.click)
     entry_comment = Entry(bottom_frame, textvariable=text_entry, width=25)
     entry_link = Entry(bottom_link_frame, textvariable=link_entry, width=25)
 

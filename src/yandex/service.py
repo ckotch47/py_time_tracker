@@ -29,6 +29,19 @@ def second_to_human_view(sec):
     except TypeError:
         return '0:00:00'
 
+class SimpleUtc(datetime.tzinfo):
+    def tzname(self, **kwargs):
+        return "UTC"
+    def utcoffset(self, dt):
+        return datetime.timedelta(0)
+
+def get_date_utcnow_iso(time=None):
+    try:
+        return datetime.datetime.utcnow().replace(tzinfo=SimpleUtc()).isoformat()
+    except:
+        return time
+
+
 class Login:
     def __init__(self):
         self.org_id = None
@@ -143,7 +156,7 @@ class Login:
         tmp = requests.post(url=f'{BASE_URL}/issues/{task_id}/worklog',
                             headers={"Authorization": "OAuth " + self.access_token, "X-Cloud-Org-ID": self.org_id},
                             json={
-                                "start": start,
+                                "start": get_date_utcnow_iso(),
                                 "duration": f"PT{duration}S",
                                 "comment": comment
                             })

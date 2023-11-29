@@ -2,9 +2,11 @@ import datetime
 import threading
 from time import sleep
 from tkinter import StringVar, messagebox
-from ..history.service import History, sqlite
+
+import isodate
+
+from ..history.service import History, second_to_human_view
 from ..yandex.service import login
-import calendar
 import re
 
 
@@ -34,10 +36,10 @@ class Timer:
         self.play = False
         if self.timer_s == 0:
             return
-        self.history.save(str(self.timer_s), self.name, datetime.datetime.now().isoformat(),
-                              link)
+
         ext_link = re.findall(r'[A-Z]*-[0-9]*', link)
         if len(ext_link) == 0:
+            self.history.save(str(self.timer_s), self.name, datetime.datetime.now().isoformat(), link)
             self.timer_s = 0
             self._start_time = 0
             return
@@ -45,11 +47,34 @@ class Timer:
         try:
             res = login.write_worklog(ext_link, datetime.datetime.now().isoformat(), str(self.timer_s), self.name)
             if res.status_code != 201:
+                self.failed_send_save_tmp(link)
                 messagebox.showerror('Not sent into tracker', res.json())
+                return
+            #todo parse and save to history
+            tmp = res.json()
+            try:
+                comment = tmp['comment']
+            except:
+                comment = ''
+            self.history.save(
+                (isodate.parse_duration(tmp['duration']).total_seconds()),
+                comment,
+                tmp['createdAt'],
+                tmp['issue']['key'],
+                tmp['issue']['display']
+            )
+            # self.history.refresh()
+
         except Exception as e:
-            print(e)
+            print('s')
+            self.failed_send_save_tmp(link)
             messagebox.showerror('Not sent into tracker', e)
 
+        self.timer_s = 0
+        self._start_time = 0
+
+    def failed_send_save_tmp(self, link):
+        self.history.save(str(self.timer_s), self.name, datetime.datetime.now().isoformat(), link, '', True)
         self.timer_s = 0
         self._start_time = 0
 
