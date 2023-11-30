@@ -16,7 +16,9 @@ def timestmap_to_date(date) -> str:
 
 def get_date():
     temp = datetime.datetime.now()
+
     today = datetime.datetime.fromisoformat(f"{temp.date()}T00:00:00+00:00").date()
+    yesterday = temp.date() - datetime.timedelta(days=1)
 
     w_start = datetime.datetime.fromisoformat(
         f"{temp.date() - datetime.timedelta(days=temp.weekday())}T00:00:00+00:00").date()
@@ -29,6 +31,7 @@ def get_date():
 
     return {
         "today": today,
+        "yesterday": yesterday,
         "week": {
             "start": w_start,
             "end": w_end
@@ -44,7 +47,7 @@ class HistoryRange:
 
 
     def __init__(self, root_frame):
-        self.day = None
+        self.day = 0
         self.table = None
         self.root = root_frame
 
@@ -151,7 +154,7 @@ class History:
                                     tag=f"{'error' if error else 'white'}")
                 self.history.tag_configure('error', background=color_error)
                 self.range.set(
-                    day=self.range.day + int(time_s),
+                    day=int(self.range.day) + int(time_s),
                 )
                 self.range.show()
             except Exception as e:
@@ -161,7 +164,7 @@ class History:
     def show(self):
         date = get_date()
         user = login.isLogin()
-        temp = login.get_statistic_fro_month(user['login'], str(f"{get_date()['today']}T00:00:00"),
+        temp = login.get_statistic_fro_month(user['login'], str(f"{get_date()['yesterday']}T00:00:00"),
                                              str(f"{get_date()['today']}T23:59:59"))  # sqlite.get(all=False)
         if temp.status_code != 200:
             return
@@ -216,7 +219,7 @@ class History:
                                     tag=f"{'gray' if j%2==0 else 'white'}")
                 j += 1
 
-            self.history.tag_configure('gray', background=color)
+        self.history.tag_configure('gray', background=color)
         self.history.bind("<Double-1>", self.link_tree)
 
     def link_tree(self, event):
