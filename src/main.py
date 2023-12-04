@@ -1,4 +1,5 @@
 import sys
+from time import sleep
 from tkinter import *
 from tkinter import messagebox, ttk
 
@@ -38,7 +39,8 @@ class PystrayIcon:
     def quit_window(self, item):
         self.show_window(item)
         if not self.timer.play:
-            self.root_frame.destroy()
+            self.icon.stop()
+            self.root_frame.after(2, self.root_frame.destroy)
         else:
             messagebox.showerror('error', 'Please stop timer')
 
