@@ -2,33 +2,19 @@ import sys
 from tkinter import *
 from tkinter import messagebox, ttk
 
+import pystray
+from PIL import Image
+from pystray import MenuItem as item
+
 from .timer.service import Timer
 from .settings.service import Settings
 from .yandex.service import login
 from .statistic.service import Statistic
 from .sqlite.service import get_path
+from .file.service import path, folder
+
 
 # from .history.service import History
-settings_gui = Settings()
-statistics_gui = Statistic()
-
-overrideredirect = False
-w_main = Tk()
-timer = Timer(w_main)
-w_main.overrideredirect(overrideredirect)
-w_main.title("Time")
-w_main.geometry(f"360x96+{w_main.winfo_screenwidth() - 360}+0")
-w_main.resizable(True, True)
-w_main.columnconfigure(0, weight=1)
-w_main.rowconfigure(3, weight=2)
-
-
-def on_closing():
-    if not timer.play:
-        w_main.destroy()
-    else:
-        messagebox.showerror('error', 'Please stop timer')
-
 
 def get_right_click() -> str:
     if sys.platform == 'darwin':
@@ -37,80 +23,155 @@ def get_right_click() -> str:
         return "<Button-3>"
 
 
-def revert_overrideredirect() -> bool:
-    global overrideredirect
-    if overrideredirect:
-        overrideredirect = False
-    else:
-        overrideredirect = True
-    return overrideredirect
+class PystrayIcon:
+    show = False
+    title = "pytimetracker"
+    image = Image.open(f"{path}/{folder}/time.png")
+
+    def __init__(self, root_frame, timer):
+        self.menu = (item('Show time tracker', self.show_window), item('Close', self.quit_window))
+        self.icon = pystray.Icon("name", self.image, "title", self.menu)
+        self.root_frame = root_frame
+        self.timer = timer
+        self.icon.run_detached()
+
+    def quit_window(self, item):
+        self.show_window(item)
+        if not self.timer.play:
+            self.root_frame.destroy()
+        else:
+            messagebox.showerror('error', 'Please stop timer')
+
+    def show_window(self, item):
+        if not self.show:
+            self.root_frame.deiconify()
+        else:
+            self.root_frame.withdraw()
+            self.root_frame.deiconify()
 
 
-def menu(root_frame):
-    global overrideredirect
-    m = Menu(root_frame, tearoff=0)
-    m.add_command(label="Overrideredirect",
-                  command=lambda: [root_frame.overrideredirect(revert_overrideredirect())])
-    m.add_command(label='Statistics', command=lambda: [statistics_gui.init(w_main)])
-    m.add_command(label='Settings', command=lambda: [settings_gui.init(w_main)])
 
-    m.add_command(label="Exit",
-                  command=lambda: [on_closing()])
+class WMain:
+    overrideredirect = False
+    settings_gui = Settings()
+    statistics_gui = Statistic()
+    title = "Time"
+    show = True
 
-    def do_popup(event):
-        try:
-            m.tk_popup(event.x_root, event.y_root)
-        finally:
-            m.grab_release()
+    def __init__(self):
 
-    root_frame.bind(f"{get_right_click()}", do_popup)
+        self.w_main = Tk()
+        # self.w_main.bind("<Unmap>", self.minimize)
+        self.timer = Timer(self.w_main)
+        self.s_tray_icon = PystrayIcon(self.w_main, self.timer)
+        self.w_main.overrideredirect(self.overrideredirect)
+        self.w_main.title(self.title)
+        self.w_main.geometry(f"360x96+{self.w_main.winfo_screenwidth() - 360}+0")
+        self.w_main.resizable(True, True)
+        self.w_main.columnconfigure(0, weight=1)
+        self.w_main.rowconfigure(3, weight=2)
+
+    def on_closing(self):
+        if not self.timer.play:
+            self.w_main.destroy()
+        else:
+            messagebox.showerror('error', 'Please stop timer')
+
+    def revert_overrideredirect(self) -> bool:
+        if self.overrideredirect:
+            self.overrideredirect = False
+        else:
+            self.overrideredirect = True
+        return self.overrideredirect
+
+    def menu(self):
+        m = Menu(self.w_main, tearoff=0)
+        m.add_command(label="Overrideredirect",
+                      command=lambda: [self.w_main.overrideredirect(self.revert_overrideredirect())])
+        m.add_command(label='Statistics', command=lambda: [self.statistics_gui.init(self.w_main)])
+        m.add_command(label='Settings', command=lambda: [self.settings_gui.init(self.w_main)])
+
+        m.add_command(label="Exit",
+                      command=lambda: [self.on_closing()])
+
+        def do_popup(event):
+            try:
+                m.tk_popup(event.x_root, event.y_root)
+            finally:
+                m.grab_release()
+
+        self.w_main.bind(f"{get_right_click()}", do_popup)
+
+    def minimize(self, event=None):
+        if not self.overrideredirect:
+            self.s_tray_icon.show = False
+            self.w_main.iconify()
 
 
-def main():
-    top_frame = Frame(w_main)
-    bottom_frame = Frame(w_main)
-    history_frame = Frame(w_main)
-    bottom_link_frame = Frame(w_main)
-    # history = History(w_main)
-    text_entry = StringVar()
-    link_entry = StringVar()
+    def maximaze(self, event=None):
+        self.s_tray_icon.show = True
 
-    w_main.protocol("WM_DELETE_WINDOW", on_closing)
 
-    time = Label(top_frame, textvariable=timer.time)
-    image_play = PhotoImage(file=f'{get_path()}/assets/play.png')
-    image_stop = PhotoImage(file=f'{get_path()}/assets/stop.png')
-    image_history = PhotoImage(file=f'{get_path()}/assets/history.png')
-    btn_start = Button(top_frame, width=16, height=16, image=image_play, compound=LEFT, command=lambda: timer.loop(text_entry.get()))
-    btn_stop = Button(top_frame, width=16, height=16, image=image_stop,
-                      command=lambda: [timer.stop(text_entry.get(), link_entry.get()), text_entry.set(''),
-                                       link_entry.set('')])
-    btn_show_history = Button(top_frame, width=16, height=16, image=image_history, command=lambda: [statistics_gui.init(w_main)]) #command=timer.history.click)
-    entry_comment = Entry(bottom_frame, textvariable=text_entry, width=25)
-    entry_link = Entry(bottom_link_frame, textvariable=link_entry, width=25)
+    def close(self):
+        self.s_tray_icon.show = False
+        self.w_main.iconify()
+        # self.w_main.iconify()
 
-    time.pack(side=LEFT, fill='x')
+    def main(self):
 
-    btn_show_history.pack(side=RIGHT, padx=(0, 0))
-    btn_stop.pack(side=RIGHT, padx=(0, 10))
-    btn_start.pack(side=RIGHT, padx=10)
+        top_frame = Frame(self.w_main)
+        bottom_frame = Frame(self.w_main)
+        history_frame = Frame(self.w_main)
+        bottom_link_frame = Frame(self.w_main)
+        # history = History(w_main)
+        text_entry = StringVar()
+        link_entry = StringVar()
+        # self.w_main.withdraw()  # hide
 
-    Label(bottom_frame, text='Comment').pack(side='left')
-    entry_comment.pack(fill='x', side='right')
-    Label(bottom_link_frame, text='Id or link').pack(side='left')
-    entry_link.pack(fill='x', side='right')
+        self.w_main.protocol("WM_DELETE_WINDOW", self.minimize)
+        self.w_main.bind('<Unmap>', self.minimize)
+        self.w_main.bind('<Map>', self.maximaze)
+        time = Label(top_frame, textvariable=self.timer.time)
+        image_play = PhotoImage(file=f'{get_path()}/assets/play.png')
+        image_stop = PhotoImage(file=f'{get_path()}/assets/stop.png')
+        image_history = PhotoImage(file=f'{get_path()}/assets/history.png')
+        btn_start = Button(top_frame, width=16, height=16, image=image_play, compound=LEFT,
+                           command=lambda: self.timer.loop(text_entry.get()))
+        btn_stop = Button(top_frame, width=16, height=16, image=image_stop,
+                          command=lambda: [self.timer.stop(text_entry.get(), link_entry.get()), text_entry.set(''),
+                                           link_entry.set('')])
+        btn_show_history = Button(top_frame, width=16, height=16, image=image_history,
+                                  command=lambda: [
+                                      self.statistics_gui.init(self.w_main)])  # command=timer.history.click)
+        entry_comment = Entry(bottom_frame, textvariable=text_entry, width=25)
+        entry_link = Entry(bottom_link_frame, textvariable=link_entry, width=25)
 
-    top_frame.pack(fill='x', pady=(0, 10))
-    bottom_frame.pack(fill='x')
-    bottom_link_frame.pack(fill='x')
-    history_frame.pack(pady=(0, 10))
-    menu(w_main)
-    w_main.focus_force()
+        time.pack(side=LEFT, fill='x')
 
-    if sys.platform == 'win32':
-        ttk.Style().theme_use("winnative")
+        btn_show_history.pack(side=RIGHT, padx=(0, 0))
+        btn_stop.pack(side=RIGHT, padx=(0, 10))
+        btn_start.pack(side=RIGHT, padx=10)
 
-    user = login.isLogin()
-    if user:
-        timer.history.click()
-    w_main.mainloop()
+        Label(bottom_frame, text='Comment').pack(side='left')
+        entry_comment.pack(fill='x', side='right')
+        Label(bottom_link_frame, text='Id or link').pack(side='left')
+        entry_link.pack(fill='x', side='right')
+
+        top_frame.pack(fill='x', pady=(0, 10))
+        bottom_frame.pack(fill='x')
+        bottom_link_frame.pack(fill='x')
+        history_frame.pack(pady=(0, 10))
+        self.menu()
+        self.w_main.focus_force()
+
+        if sys.platform == 'win32':
+            ttk.Style().theme_use("winnative")
+
+        user = login.isLogin()
+        if user:
+            self.timer.history.click()
+
+        self.w_main.mainloop()
+
+
+w_main = WMain()

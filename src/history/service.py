@@ -153,6 +153,7 @@ class History:
                                     ),
                                     tag=f"{'error' if error else 'white'}")
                 self.history.tag_configure('error', background=color_error)
+                # self.history.tag_configure('gray', background=color)
                 self.range.set(
                     day=int(self.range.day) + int(time_s),
                 )
