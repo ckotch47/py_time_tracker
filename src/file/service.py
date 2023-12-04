@@ -7,7 +7,8 @@ folder = 'assets'
 files = [
     "play.png",
     "stop.png",
-    "history.png"
+    "history.png",
+    "time.png"
 ]
 
 def check_and_download_files():
