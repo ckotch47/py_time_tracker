@@ -143,6 +143,7 @@ class History:
     def save(self, time_s: str, name: str, date_at: str, link: str = None, title: str = '', error: bool = False):
         if self.history:
             try:
+                len_history = len(self.history.get_children())
                 self.history.insert(parent='', index='0', iid=f'{int(time_s)}_{date_at}', text=f'',
                                     values=(
                                         f"{date_at.split('.')[0]}",
@@ -151,9 +152,8 @@ class History:
                                         title,
                                         name,
                                     ),
-                                    tag=f"{'error' if error else 'white'}")
-                self.history.tag_configure('error', background=color_error)
-                # self.history.tag_configure('gray', background=color)
+                                    tag=f"{'error' if error else 'white' if len_history%2!=0 else 'gray'}")
+
                 self.range.set(
                     day=int(self.range.day) + int(time_s),
                 )
@@ -219,7 +219,7 @@ class History:
                                     ),
                                     tag=f"{'gray' if j%2==0 else 'white'}")
                 j += 1
-
+        self.history.tag_configure('error', background=color_error)
         self.history.tag_configure('gray', background=color)
         self.history.bind("<Double-1>", self.link_tree)
 
