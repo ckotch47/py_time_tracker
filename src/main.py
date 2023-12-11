@@ -1,5 +1,5 @@
 import sys
-from time import sleep
+from babel.numbers import *
 from tkinter import *
 from tkinter import messagebox, ttk
 
@@ -7,13 +7,14 @@ import pystray
 from PIL import Image
 from pystray import MenuItem as item
 
+from .statistic.service_v2 import StatisticV2
 from .timer.service import Timer
 from .settings.service import Settings
 from .yandex.service import login
 from .statistic.service import Statistic
 from .sqlite.service import get_path
 from .file.service import path, folder
-
+from .issue.service import IssueGui
 
 # from .history.service import History
 
@@ -30,6 +31,8 @@ class PystrayIcon:
     image = Image.open(f"{path}/{folder}/time.png")
 
     def __init__(self, root_frame, timer):
+        if sys.platform == 'linux':
+            return None
         self.menu = (item('Show time tracker', self.show_window), item('Close', self.quit_window))
         self.icon = pystray.Icon("name", self.image, "title", self.menu)
         self.root_frame = root_frame
@@ -39,7 +42,8 @@ class PystrayIcon:
     def quit_window(self, item):
         self.show_window(item)
         if not self.timer.play:
-            self.icon.stop()
+            if sys.platform != 'linux':
+                self.icon.stop()
             self.root_frame.after(2, self.root_frame.destroy)
         else:
             messagebox.showerror('error', 'Please stop timer')
@@ -52,16 +56,17 @@ class PystrayIcon:
             self.root_frame.deiconify()
 
 
-
 class WMain:
     overrideredirect = False
     settings_gui = Settings()
     statistics_gui = Statistic()
+    statistic_v2 = StatisticV2()
     title = "Time"
     show = True
 
     def __init__(self):
 
+        self.menuBar = None
         self.w_main = Tk()
         # self.w_main.bind("<Unmap>", self.minimize)
         self.timer = Timer(self.w_main)
@@ -73,6 +78,11 @@ class WMain:
         self.w_main.columnconfigure(0, weight=1)
         self.w_main.rowconfigure(3, weight=2)
 
+
+        self.issue_gui = IssueGui()
+
+        from src.update.service import check_last_releases
+        check_last_releases()
     def on_closing(self):
         if not self.timer.play:
             self.w_main.destroy()
@@ -90,29 +100,49 @@ class WMain:
         m = Menu(self.w_main, tearoff=0)
         m.add_command(label="Overrideredirect",
                       command=lambda: [self.w_main.overrideredirect(self.revert_overrideredirect())])
+
         m.add_command(label='Statistics', command=lambda: [self.statistics_gui.init(self.w_main)])
+        m.add_command(label='Statistics V2', command=lambda: [self.statistic_v2.show(self.w_main)])
+        m.add_command(label='Issue', command=lambda: [self.issue_gui.init(self.w_main)])
         m.add_command(label='Settings', command=lambda: [self.settings_gui.init(self.w_main)])
 
-        m.add_command(label="Exit",
-                      command=lambda: [self.on_closing()])
+        m.add_command(label="Exit", command=lambda: [self.on_closing()])
 
         def do_popup(event):
             try:
                 m.tk_popup(event.x_root, event.y_root)
             finally:
-                m.grab_release()
+                try:
+                    m.grab_release()
+                except:
+                    pass
 
         self.w_main.bind(f"{get_right_click()}", do_popup)
+
+    def top_level_menu(self):
+        main_menu = Menu(self.w_main)
+        self.w_main.config(menu=main_menu)
+
+        main_menu_command = Menu(main_menu, tearoff=0)
+        main_menu_command.add_command(label="Overrideredirect",
+                      command=lambda: [self.w_main.overrideredirect(self.revert_overrideredirect())])
+
+        main_menu_command.add_command(label='Statistics', command=lambda: [self.statistics_gui.init(self.w_main)])
+        main_menu_command.add_command(label='Statistics V2', command=lambda: [self.statistic_v2.show(self.w_main)])
+        main_menu_command.add_command(label='Issue', command=lambda: [self.issue_gui.init(self.w_main)])
+        main_menu_command.add_command(label='Settings', command=lambda: [self.settings_gui.init(self.w_main)])
+
+        main_menu_command.add_command(label="Exit", command=lambda: [self.on_closing()])
+
+        main_menu.add_cascade(label="Menu", menu=main_menu_command)
 
     def minimize(self, event=None):
         if not self.overrideredirect:
             self.s_tray_icon.show = False
             self.w_main.iconify()
 
-
     def maximaze(self, event=None):
         self.s_tray_icon.show = True
-
 
     def close(self):
         self.s_tray_icon.show = False
@@ -144,7 +174,7 @@ class WMain:
                                            link_entry.set('')])
         btn_show_history = Button(top_frame, width=16, height=16, image=image_history,
                                   command=lambda: [
-                                      self.statistics_gui.init(self.w_main)])  # command=timer.history.click)
+                                      self.statistic_v2.show(self.w_main)])
         entry_comment = Entry(bottom_frame, textvariable=text_entry, width=25)
         entry_link = Entry(bottom_link_frame, textvariable=link_entry, width=25)
 
@@ -164,6 +194,7 @@ class WMain:
         bottom_link_frame.pack(fill='x')
         history_frame.pack(pady=(0, 10))
         self.menu()
+        self.top_level_menu()
         self.w_main.focus_force()
 
         if sys.platform == 'win32':

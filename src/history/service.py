@@ -144,6 +144,8 @@ class History:
         if self.history:
             try:
                 len_history = len(self.history.get_children())
+                if len_history == 0:
+                    len_history = 1
                 self.history.insert(parent='', index='0', iid=f'{int(time_s)}_{date_at}', text=f'',
                                     values=(
                                         f"{date_at.split('.')[0]}",

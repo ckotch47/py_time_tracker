@@ -16,3 +16,4 @@ six==1.16.0
 typing_extensions==4.8.0
 urllib3==2.1.0
 pystray==0.19.5
+tkcalendar~=1.6.1

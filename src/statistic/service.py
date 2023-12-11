@@ -7,9 +7,19 @@ import darkdetect
 
 color = '#bfbfbf'
 color_error = '#e57373'
+color_cal_foreground = 'black'
+color_cal_selectforeground = 'red'
+color_cal_background = 'gray'
+color_cal_headersforeground = 'black'
+color_cal_normalforeground = 'black'
 if darkdetect.isDark():
     color = '#353535'
     color_error = '#e53935'
+    color_cal_foreground = 'white'
+    color_cal_selectforeground = 'red'
+    color_cal_background = 'gray'
+    color_cal_headersforeground = 'white'
+    color_cal_normalforeground = 'white'
 
 
 class Statistic:
@@ -33,37 +43,9 @@ class Statistic:
         user = login.isLogin()
         if not user:
             return
-        temp = datetime.datetime.now()
-        data_from = temp.date() - datetime.timedelta(days=temp.day - 1)
-        date_to = temp.date() + datetime.timedelta(
-            days=calendar.monthrange(temp.date().year, temp.date().month)[1] - temp.day)
 
-        month_day_arr = dict()
-        for i in range(1, calendar.monthrange(temp.date().year, temp.date().month)[1] + 1):
-            month_day_arr[
-                datetime.datetime.fromisoformat(f"{temp.year}-{temp.month}-{i if i > 9 else f'0{i}'}").strftime(
-                    "%Y-%m-%d")] = 0
-        res = []
-
-        for i in month_day_arr:
-            tmp = login.get_statistic_fro_month(user['login'], f"{i}T00:00:00", f"{i}T23:59:59")
-            try:
-                if len(tmp.json()) > 0:
-                    for j in tmp.json():
-                        res.append(j)
-            except:
-                pass
-
-        temp = res  # $login.get_statistic_fro_month(user['login'], str(data_from), str(date_to))
-        if len(temp) == 0:
-            pass
-        all_month = 0
-        for i in temp:
-            date = str(datetime.datetime.fromisoformat(i['createdAt'].split('T')[0]).date())
-            if date in month_day_arr.keys():
-                month_day_arr[date] += int(isodate.parse_duration(i['duration']).total_seconds())
-                all_month += int(isodate.parse_duration(i['duration']).total_seconds())
-
+        month_day_arr, res, all_month, count_days = login.get_month_array()
+        temp = res
         table = ttk.Treeview(w_statistic)
         table['columns'] = ('day', 'time', 'link', 'title', 'comment')
         table.column('#0', width=0, stretch=False)
@@ -107,7 +89,7 @@ class Statistic:
         j = 0
 
         table.tag_configure('gray', background=color)
-        Label(w_statistic, text=f'Month: {second_to_human_view(all_month)}').pack()
+        Label(w_statistic, text=f'Month: {second_to_human_view(all_month, 24)}').pack()
         table.pack(fill='both', expand=True)
         table.bind("<Double-1>", self.link_tree)
         self.table = table
