@@ -11,6 +11,7 @@ files = [
     "time.png"
 ]
 
+
 def check_and_download_files():
     if not os.path.exists(f'{path}/{folder}'):
         # Create a new directory because it does not exist

@@ -66,7 +66,7 @@ class Timer:
             # self.history.refresh()
 
         except Exception as e:
-            print('s')
+
             self.failed_send_save_tmp(link)
             messagebox.showerror('Not sent into tracker', e)
 

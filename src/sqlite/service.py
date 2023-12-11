@@ -10,7 +10,7 @@ def get_path() -> str:
     if sys.platform == 'darwin' or sys.platform == 'win32':
         folder_path = f'{Path.home()}/documents/pytimetracker'
     else:
-        folder_path = f'{Path.home()}/temp/pytimetracker'
+        folder_path = f'{Path.home()}/Documents/pytimetracker'
     return folder_path
 
 
@@ -27,6 +27,7 @@ class SQLite:
         self.connection: sqlite3.Connection
         self.str_db: str = f'{self.path}/data.db'
 
+
         try:
             self.connect()
         except sqlite3.OperationalError as e:
@@ -35,11 +36,17 @@ class SQLite:
                 self.__init__()
 
         try:
-            self.cursor.execute('SELECT count(id) FROM settings')
+            self.execute('SELECT count(id) FROM settings')
         except sqlite3.Error as e:
             if e.args[0] == 'no such table: settings':
                 self.create_table()
                 self.__init__()
+
+        try:
+            self.query_get_last()
+        except sqlite3.Error as e:
+            if e.args[0] == 'no such table: query':
+                self.query_create_table()
 
     def connect(self):
         self.connection = sqlite3.connect(self.str_db)
@@ -49,6 +56,7 @@ class SQLite:
         os.mkdir(self.path)
 
     def execute(self, sql) -> Any:
+        self.cursor = self.connection.cursor()
         temp = self.cursor.execute(sql)
         self.connection.commit()
         return temp
@@ -90,5 +98,24 @@ class SQLite:
 
     def get_settings(self):
         return self.execute('select * from settings where id = 1').fetchall()
+
+    def query_get_last(self):
+        sql = 'select * from query order by id desc limit 1'
+        return self.execute(sql).fetchone()
+
+    def query_save(self, q):
+        sql = f"insert into query VALUES (NULL, '{q}')"
+        return self.execute(sql)
+
+    def query_create_table(self):
+        sql = "create table query \
+                        ( \
+                            id integer \
+                                constraint query_pk \
+                                    primary key autoincrement,\
+                            query text \
+                        ); "
+
+        self.execute(sql)
 
 sqlite = SQLite()

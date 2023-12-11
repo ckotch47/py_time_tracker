@@ -2,8 +2,10 @@ import configparser
 import tkinter
 import os.path
 import datetime
+import calendar
 from tkinter import messagebox
 
+import isodate
 import requests
 from PIL import Image, ImageTk
 import qrcode
@@ -12,17 +14,24 @@ from src.sqlite.service import sqlite, get_path
 
 BASE_URL = 'https://api.tracker.yandex.net/v2'
 
-def timedelta_to_hms(duration):
+def timedelta_to_hms(duration, format=24):
     days, seconds = duration.days, duration.seconds
-    hours = days * 24 + seconds // 3600
+    hours = days * format + seconds // 3600
     minutes = (seconds % 3600) // 60
     seconds = (seconds % 60)
     return hours, minutes, seconds
 
-def second_to_human_view(sec):
+def hms_to_second(duration, format=8):
+    days, seconds = duration.days, duration.seconds
+    hours = days * format + seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = (seconds % 60)
+    return hours*3600 + minutes*60 + seconds
+
+def second_to_human_view(sec, format=8):
     try:
         t = datetime.timedelta(seconds=int(sec))
-        t = timedelta_to_hms(t)
+        t = timedelta_to_hms(t, format)
         return f"{t[0] if t[0] > 9 else f'0{t[0]}'}:" \
                f"{t[1] if t[1] > 9 else f'0{t[1]}'}:" \
                f"{t[2] if t[2] > 9 else f'0{t[2]}'}"
@@ -174,6 +183,55 @@ class Login:
                                   }
                             })
         return tmp
+
+    def get_issue_by_query(self, query: str, page: int) -> []:
+        tmp = requests.post(url=f'{BASE_URL}/issues/_search?expand=attachments&perPage=10&page={page}',
+                            headers={"Authorization": "OAuth " + self.access_token, "X-Cloud-Org-ID": self.org_id},
+                            json={
+                                "query": f"{query}"
+                            })
+        return tmp if tmp.status_code == 200 else []
+
+
+    def get_month_array(self, month=None, year=None):
+        temp = datetime.datetime.now()
+
+        if not month:
+            month = temp.date().month
+
+        if not year:
+            year = temp.date().year
+
+        user = self.isLogin()
+        month_day_arr = dict()
+
+        count_days = calendar.monthrange(year, month)[1] + 1
+        for i in range(1, count_days):
+            month_day_arr[
+                datetime.datetime.fromisoformat(f"{year}-{month}-{i if i > 9 else f'0{i}'}").strftime(
+                    "%Y-%m-%d")] = 0
+        res = []
+
+        for i in month_day_arr:
+            tmp = login.get_statistic_fro_month(user['login'], f"{i}T00:00:00", f"{i}T23:59:59")
+            try:
+                if len(tmp.json()) > 0:
+                    for j in tmp.json():
+                        res.append(j)
+            except:
+                pass
+
+        temp = res  # $login.get_statistic_fro_month(user['login'], str(data_from), str(date_to))
+        if len(temp) == 0:
+            pass
+        all_month = 0
+        for i in temp:
+            date = str(datetime.datetime.fromisoformat(i['createdAt'].split('T')[0]).date())
+            if date in month_day_arr.keys():
+                month_day_arr[date] += int(isodate.parse_duration(i['duration']).total_seconds())
+                all_month += int(hms_to_second(isodate.parse_duration(i['duration']), 8))
+
+        return month_day_arr, res, all_month, count_days
 
     @staticmethod
     def checkCode():
