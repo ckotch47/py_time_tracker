@@ -2,7 +2,7 @@ from tkinter import messagebox
 
 import requests
 
-self_version = 'v0.0.3'
+self_version = 'v0.0.4'
 
 
 def check_last_releases():

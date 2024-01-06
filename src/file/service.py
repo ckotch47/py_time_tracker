@@ -8,7 +8,8 @@ files = [
     "play.png",
     "stop.png",
     "history.png",
-    "time.png"
+    "time.png",
+    "time_black.png"
 ]
 
 

@@ -208,7 +208,7 @@ class Login:
         count_days = calendar.monthrange(year, month)[1] + 1
         for i in range(1, count_days):
             month_day_arr[
-                datetime.datetime.fromisoformat(f"{year}-{month}-{i if i > 9 else f'0{i}'}").strftime(
+                datetime.datetime.fromisoformat(f"{year}-{month if month > 9 else f'0{month}'}-{i if i > 9 else f'0{i}'}").strftime(
                     "%Y-%m-%d")] = 0
         res = []
 

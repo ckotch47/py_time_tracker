@@ -75,12 +75,6 @@ class IssueGui:
         table.heading("status", text="status", anchor='center')
         table.heading("queue", text="queue", anchor='center')
 
-
-        try:
-            self.find_issue()
-        except:
-            pass
-
         table.bind("<Double-1>", self.link_tree)
 
         table.tag_configure('gray', background=color)
@@ -100,14 +94,14 @@ class IssueGui:
 
     def find_issue(self):
         tmp = login.get_issue_by_query(query=str(self.string_query.get()), page=self.page)
-
+        print(tmp.headers)
         if self.total_page == 0:
             self.total_page = int(tmp.headers['X-Total-Pages'])
         if not self.string_query.get() == self.base_query:
             sqlite.query_save(self.string_query.get())
             self.base_query = self.string_query.get()
         self.total_page = int(tmp.headers['X-Total-Pages'])
-        self.string_total.set(f"{self.page}/{self.total_page} page")
+        self.string_total.set(f"Total count: {tmp.headers['X-Total-Count']}     {self.page}/{self.total_page} page")
         self.refresh_table(tmp.json())
 
     def next_issue(self):

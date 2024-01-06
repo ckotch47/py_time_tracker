@@ -9,7 +9,7 @@ from pystray import MenuItem as item
 
 from .statistic.service_v2 import StatisticV2
 from .timer.service import Timer
-from .settings.service import Settings
+from .settings.service import Settings, sqlite
 from .yandex.service import login
 from .statistic.service import Statistic
 from .sqlite.service import get_path
@@ -28,9 +28,16 @@ def get_right_click() -> str:
 class PystrayIcon:
     show = False
     title = "pytimetracker"
+    icon = 'time'
     image = Image.open(f"{path}/{folder}/time.png")
 
     def __init__(self, root_frame, timer):
+        try:
+            self.icon = sqlite.get_icon_black_or_white()[1]
+            self.image = Image.open(f"{path}/{folder}/{self.icon}.png")
+        except:
+            pass
+
         if sys.platform == 'linux':
             return None
         self.menu = (item('Show time tracker', self.show_window), item('Close', self.quit_window))
@@ -106,7 +113,7 @@ class WMain:
         m.add_command(label='Issue', command=lambda: [self.issue_gui.init(self.w_main)])
         m.add_command(label='Settings', command=lambda: [self.settings_gui.init(self.w_main)])
 
-        m.add_command(label="Exit", command=lambda: [self.on_closing()])
+        # m.add_command(label="Exit", command=lambda: [self.on_closing()])
 
         def do_popup(event):
             try:
